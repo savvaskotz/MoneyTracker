@@ -41,6 +41,9 @@ public class Transaction
 
     public string CurrencyCode { get; set; } = "EUR";
 
+    /// <summary>Optional free-text note the user can attach to the transaction.</summary>
+    public string? Note { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     /// <summary>Signed value: negative for expenses, positive for income.</summary>

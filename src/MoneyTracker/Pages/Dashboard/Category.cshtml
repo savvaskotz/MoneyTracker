@@ -87,6 +87,10 @@
                                     <td>
                                         @t.OriginalDescription
                                         <div class="muted" style="font-size:.8rem">@t.NormalizedDescription</div>
+                                        @if (!string.IsNullOrWhiteSpace(t.Note))
+                                        {
+                                            <div style="font-size:.8rem">📝 @t.Note</div>
+                                        }
                                     </td>
                                     <td class="num @(t.Type == TransactionType.Expense ? "value expense" : "value income")"
                                         style="font-size:1rem">

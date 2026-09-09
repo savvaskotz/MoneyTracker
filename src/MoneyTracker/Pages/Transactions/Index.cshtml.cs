@@ -35,6 +35,9 @@ public class IndexModel : PageModel
     public Dictionary<long, int?> Selected { get; set; } = new();
 
     [BindProperty]
+    public Dictionary<long, string?> Notes { get; set; } = new();
+
+    [BindProperty]
     public long DeleteId { get; set; }
 
     public List<Transaction> Items { get; private set; } = new();
@@ -45,20 +48,33 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostSaveAsync()
     {
-        // Apply category changes and learn from them (spec §11).
-        var ids = Selected.Keys.ToList();
+        // Apply category + note changes and learn from category corrections (spec §11).
+        var ids = Selected.Keys.Union(Notes.Keys).Distinct().ToList();
         var txs = await _db.Transactions.Where(t => ids.Contains(t.Id)).ToListAsync();
         int changed = 0;
         foreach (var t in txs)
         {
-            var newCat = Selected[t.Id];
-            if (t.CategoryId != newCat)
+            var rowChanged = false;
+
+            if (Selected.TryGetValue(t.Id, out var newCat) && t.CategoryId != newCat)
             {
                 t.CategoryId = newCat;
-                changed++;
+                rowChanged = true;
                 if (newCat is int cid)
                     await _learning.LearnAsync(t.NormalizedDescription, cid);
             }
+
+            if (Notes.TryGetValue(t.Id, out var newNote))
+            {
+                newNote = string.IsNullOrWhiteSpace(newNote) ? null : newNote.Trim();
+                if (t.Note != newNote)
+                {
+                    t.Note = newNote;
+                    rowChanged = true;
+                }
+            }
+
+            if (rowChanged) changed++;
         }
         await _db.SaveChangesAsync();
         Message = changed > 0 ? $"Ενημερώθηκαν {changed} κινήσεις." : "Καμία αλλαγή.";

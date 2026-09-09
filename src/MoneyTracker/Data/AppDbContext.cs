@@ -49,6 +49,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.Reference).HasMaxLength(100);
             e.Property(x => x.Fingerprint).HasMaxLength(64).IsFixedLength().IsRequired();
             e.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
+            e.Property(x => x.Note).HasMaxLength(1000);
             e.Ignore(x => x.SignedAmount);
 
             e.HasOne(x => x.Account).WithMany(x => x.Transactions)

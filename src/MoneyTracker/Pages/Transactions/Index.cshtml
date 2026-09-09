@@ -55,6 +55,7 @@
                     <th>Περιγραφή</th>
                     <th class="num">Ποσό</th>
                     <th>Κατηγορία</th>
+                    <th>Σχόλιο</th>
                     <th></th>
                 </tr>
             </thead>
@@ -86,6 +87,10 @@
                                 }
                             }
                         </select>
+                    </td>
+                    <td>
+                        <input type="text" name="Notes[@t.Id]" value="@t.Note"
+                               placeholder="σχόλιο..." style="width:100%; min-width:160px;" />
                     </td>
                     <td>
                         <button type="submit" asp-page-handler="Delete" name="DeleteId" value="@t.Id"

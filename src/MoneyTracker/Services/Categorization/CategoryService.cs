@@ -19,6 +19,9 @@ public interface ICategoryService
     /// <summary>Get-or-create the whole path (e.g. "Σπίτι / Supermarket"). Returns the leaf.</summary>
     Task<Category> EnsurePathAsync(IEnumerable<string> segments);
 
+    /// <summary>Find the leaf of an existing path without creating anything. Null if not found.</summary>
+    Task<Category?> FindByPathAsync(IEnumerable<string> segments);
+
     Task<Category> CreateAsync(string name, int? parentId);
 
     Task MoveAsync(int categoryId, int? newParentId);
@@ -92,6 +95,29 @@ public class CategoryService : ICategoryService
         }
 
         return current!;
+    }
+
+    public async Task<Category?> FindByPathAsync(IEnumerable<string> segments)
+    {
+        var names = segments
+            .Select(s => s?.Trim() ?? string.Empty)
+            .Where(s => s.Length > 0)
+            .Take(MaxDepth)
+            .ToList();
+        if (names.Count == 0) return null;
+
+        int? parentId = null;
+        Category? current = null;
+        foreach (var name in names)
+        {
+            var key = TextNormalizer.Key(name);
+            var pid = parentId;
+            current = await _db.Categories
+                .FirstOrDefaultAsync(c => c.ParentId == pid && c.NormalizedName == key);
+            if (current == null) return null;
+            parentId = current.Id;
+        }
+        return current;
     }
 
     public async Task<Category> CreateAsync(string name, int? parentId)

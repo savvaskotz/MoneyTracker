@@ -11,7 +11,9 @@ public interface IImportService
     /// <summary>Parse + stage a file for preview. Returns the batch id, or errors (no batch).</summary>
     Task<(int? BatchId, List<string> Errors)> BuildPreviewAsync(Stream excelStream, string fileName);
 
-    Task ConfirmAsync(int batchId, IDictionary<long, int?> selectedCategoryByRowId);
+    Task ConfirmAsync(int batchId,
+        IDictionary<long, int?> selectedCategoryByRowId,
+        IDictionary<long, bool> includedByRowId);
 
     Task CancelAsync(int batchId);
 }
@@ -56,8 +58,8 @@ public class ImportService : IImportService
 
         var account = await ResolveAccountAsync(read.AccountIdentifier);
 
-        // Ensure the category tree from the bank's category column exists (reference data,
-        // created before confirm so the preview can offer real category ids).
+        // Resolve the bank's category column to an EXISTING category only — we do NOT create
+        // categories automatically. If the user hasn't created it, the row stays uncategorized.
         var bankCategoryIds = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var distinctPaths = read.Rows
             .Select(r => r.BankCategoryPath)
@@ -69,8 +71,8 @@ public class ImportService : IImportService
             if (IsUncategorizedBankLabel(path)) continue;
             var segments = path.Split(profile.CategoryPathSeparator,
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            var leaf = await _categories.EnsurePathAsync(segments);
-            bankCategoryIds[path] = leaf.Id;
+            var leaf = await _categories.FindByPathAsync(segments);
+            if (leaf != null) bankCategoryIds[path] = leaf.Id;
         }
 
         // Normalize + compute occurrence ordinals (stable, file order) for the fingerprint.
@@ -78,12 +80,25 @@ public class ImportService : IImportService
             .Select(r => new { Row = r, Norm = _normalizer.Normalize(r.OriginalDescription) })
             .ToList();
 
-        var ordinalCounter = new Dictionary<string, int>();
-        var existingFingerprints = await _db.Transactions
+        // Existing transactions for this account, for duplicate/update detection.
+        var existing = await _db.Transactions
             .Where(t => t.AccountId == account.Id)
-            .Select(t => t.Fingerprint)
+            .Select(t => new { t.Fingerprint, t.Reference, t.CategoryId })
             .ToListAsync();
-        var existingSet = new HashSet<string>(existingFingerprints);
+        var fpToExisting = existing
+            .GroupBy(e => e.Fingerprint)
+            .ToDictionary(g => g.Key, g => g.First());
+        var refCounts = existing
+            .Where(e => !string.IsNullOrEmpty(e.Reference))
+            .GroupBy(e => e.Reference!)
+            .ToDictionary(g => g.Key, g => g.Count());
+        var refToExisting = existing
+            .Where(e => !string.IsNullOrEmpty(e.Reference))
+            .GroupBy(e => e.Reference!)
+            .Where(g => g.Count() == 1)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var ordinalCounter = new Dictionary<string, int>();
         var seenInFile = new HashSet<string>();
 
         var ctx = await _suggestions.CreateContextAsync();
@@ -100,7 +115,7 @@ public class ImportService : IImportService
         _db.ImportBatches.Add(batch);
         await _db.SaveChangesAsync();
 
-        int dupCount = 0;
+        int dupCount = 0, existCount = 0;
         foreach (var item in normalized)
         {
             var r = item.Row;
@@ -115,15 +130,34 @@ public class ImportService : IImportService
 
             var fp = _fingerprint.Compute(account.Id, r.TransactionDate, r.SignedAmount, norm, r.Reference, ord);
 
+            // Detect existing (-> update) vs in-file duplicate (-> skip) vs new.
             string? dupReason = null;
-            if (existingSet.Contains(fp)) dupReason = "ExistsInDb";
-            else if (!seenInFile.Add(fp)) dupReason = "DuplicateInFile";
-            var isDup = dupReason != null;
-            if (isDup) dupCount++;
+            int? existingCatId = null;
+            if (fpToExisting.TryGetValue(fp, out var m1))
+            {
+                dupReason = "ExistsInDb";
+                existingCatId = m1.CategoryId;
+            }
+            else if (r.Reference != null && refCounts.TryGetValue(r.Reference, out var rc) && rc == 1)
+            {
+                // Same παραστατικό already stored (even if some field changed) -> update it.
+                dupReason = "ExistsInDb";
+                existingCatId = refToExisting[r.Reference].CategoryId;
+            }
+            else if (!seenInFile.Add(fp))
+            {
+                dupReason = "DuplicateInFile";
+            }
+
+            if (dupReason == "ExistsInDb") existCount++;
+            else if (dupReason == "DuplicateInFile") dupCount++;
 
             int? bankCatId = r.BankCategoryPath != null && bankCategoryIds.TryGetValue(r.BankCategoryPath, out var bid)
                 ? bid : (int?)null;
             var (suggestedId, source) = _suggestions.Suggest(ctx, norm, bankCatId);
+
+            // For an existing row, keep its current category by default (update should not wipe it).
+            int? selected = dupReason == "ExistsInDb" ? (existingCatId ?? suggestedId) : suggestedId;
 
             _db.ImportStagingRows.Add(new ImportStagingRow
             {
@@ -138,21 +172,26 @@ public class ImportService : IImportService
                 CurrencyCode = r.CurrencyCode,
                 Fingerprint = fp,
                 SuggestedCategoryId = suggestedId,
-                SelectedCategoryId = suggestedId,
+                SelectedCategoryId = selected,
                 SuggestionSource = source,
-                IsDuplicate = isDup,
-                DuplicateReason = dupReason
+                IsDuplicate = dupReason != null,
+                DuplicateReason = dupReason,
+                // In-file duplicates are excluded by default; new & existing rows are included.
+                Included = dupReason != "DuplicateInFile"
             });
         }
 
         batch.DuplicateCount = dupCount;
-        batch.NewCount = read.Rows.Count - dupCount;
+        batch.UpdatedCount = existCount;
+        batch.NewCount = read.Rows.Count - dupCount - existCount;
         await _db.SaveChangesAsync();
 
         return (batch.Id, new List<string>());
     }
 
-    public async Task ConfirmAsync(int batchId, IDictionary<long, int?> selectedCategoryByRowId)
+    public async Task ConfirmAsync(int batchId,
+        IDictionary<long, int?> selectedCategoryByRowId,
+        IDictionary<long, bool> includedByRowId)
     {
         var batch = await _db.ImportBatches
             .Include(b => b.StagingRows)
@@ -164,12 +203,53 @@ public class ImportService : IImportService
 
         await using var tx = await _db.Database.BeginTransactionAsync();
 
-        int newCount = 0;
-        foreach (var row in batch.StagingRows.Where(s => !s.IsDuplicate).OrderBy(s => s.RowIndex))
+        int newCount = 0, updatedCount = 0;
+        foreach (var row in batch.StagingRows.OrderBy(s => s.RowIndex))
         {
+            // The user can uncheck a row in the preview to skip it entirely. Every processable
+            // row renders a checkbox, so an absent key means the user unchecked it.
+            var included = includedByRowId.TryGetValue(row.Id, out var inc) && inc;
+            if (!included) continue;
+            if (row.DuplicateReason == "DuplicateInFile") continue;
+
             var selected = selectedCategoryByRowId.TryGetValue(row.Id, out var sel)
                 ? sel
                 : row.SelectedCategoryId;
+
+            if (row.DuplicateReason == "ExistsInDb")
+            {
+                // Update the existing transaction instead of inserting a duplicate.
+                var existing = await _db.Transactions
+                    .FirstOrDefaultAsync(t => t.AccountId == batch.AccountId && t.Fingerprint == row.Fingerprint);
+                if (existing == null && !string.IsNullOrEmpty(row.Reference))
+                {
+                    var matches = await _db.Transactions
+                        .Where(t => t.AccountId == batch.AccountId && t.Reference == row.Reference)
+                        .ToListAsync();
+                    if (matches.Count == 1) existing = matches[0];
+                }
+
+                if (existing != null)
+                {
+                    var prevCat = existing.CategoryId;
+                    existing.CategoryId = selected;
+                    existing.Amount = row.Amount;
+                    existing.Type = row.Type;
+                    existing.TransactionDate = row.TransactionDate;
+                    existing.Description = row.OriginalDescription;
+                    existing.OriginalDescription = row.OriginalDescription;
+                    existing.NormalizedDescription = row.NormalizedDescription;
+                    existing.Reference = row.Reference;
+                    existing.Fingerprint = row.Fingerprint;
+                    existing.CurrencyCode = row.CurrencyCode;
+                    updatedCount++;
+
+                    if (selected is int uc && uc != prevCat)
+                        await _learning.LearnAsync(row.NormalizedDescription, uc);
+                    continue;
+                }
+                // Fall through to insert if the existing row could not be resolved.
+            }
 
             _db.Transactions.Add(new Transaction
             {
@@ -195,6 +275,7 @@ public class ImportService : IImportService
         }
 
         batch.NewCount = newCount;
+        batch.UpdatedCount = updatedCount;
         batch.Status = ImportStatus.Completed;
         batch.CompletedAt = DateTime.UtcNow;
 

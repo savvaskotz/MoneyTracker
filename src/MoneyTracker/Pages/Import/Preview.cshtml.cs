@@ -29,6 +29,9 @@ public class PreviewModel : PageModel
     [BindProperty]
     public Dictionary<long, int?> Selected { get; set; } = new();
 
+    [BindProperty]
+    public Dictionary<long, bool> Included { get; set; } = new();
+
     public async Task<IActionResult> OnGetAsync(int id)
     {
         if (!await LoadAsync(id)) return NotFound();
@@ -44,7 +47,7 @@ public class PreviewModel : PageModel
         if (batch.Status != ImportStatus.Pending)
             return RedirectToPage("/Import/Result", new { id });
 
-        await _import.ConfirmAsync(id, Selected);
+        await _import.ConfirmAsync(id, Selected, Included);
         return RedirectToPage("/Import/Result", new { id });
     }
 

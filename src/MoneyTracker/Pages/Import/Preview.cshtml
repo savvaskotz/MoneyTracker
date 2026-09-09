@@ -19,9 +19,14 @@
     <strong>@Model.Batch.FileName</strong>
     <span class="muted"> · Σύνολο: @Model.Batch.TotalRows ·
         <span class="badge new">Νέες @Model.Batch.NewCount</span>
-        <span class="badge dup">Διπλότυπα @Model.Batch.DuplicateCount</span>
+        <span class="badge src">Ενημέρωση @Model.Batch.UpdatedCount</span>
+        <span class="badge dup">Διπλότυπα αρχείου @Model.Batch.DuplicateCount</span>
     </span>
-    <p class="muted">Άλλαξε κατηγορίες όπου χρειάζεται και πάτησε «Επιβεβαίωση εισαγωγής». Τα διπλότυπα δεν θα εισαχθούν.</p>
+    <p class="muted">
+        Ξετσέκαρε όποια γραμμή δεν θέλεις για να μην εισαχθεί. Οι γραμμές με «Ενημέρωση»
+        υπάρχουν ήδη (ίδιο παραστατικό) και θα ενημερωθούν αντί να διπλοκαταχωρηθούν.
+        Οι κατηγορίες δεν δημιουργούνται αυτόματα — φτιάξ' τες από τις «Κατηγορίες».
+    </p>
 </div>
 
 <form method="post">
@@ -29,6 +34,7 @@
         <table>
             <thead>
                 <tr>
+                    <th>Εισαγωγή</th>
                     <th>#</th>
                     <th>Ημ/νία</th>
                     <th>Περιγραφή</th>
@@ -43,7 +49,14 @@
             {
                 var suggestedPath = row.SuggestedCategoryId is int sid && Model.CategoryPaths.TryGetValue(sid, out var p)
                     ? p : "Δεν βρέθηκε κατηγορία";
+                var isSkippable = row.DuplicateReason == "DuplicateInFile";
                 <tr>
+                    <td>
+                        @if (!isSkippable)
+                        {
+                            <input type="checkbox" name="Included[@row.Id]" value="true" @(row.Included ? "checked" : null) />
+                        }
+                    </td>
                     <td class="muted">@row.RowIndex</td>
                     <td>@row.TransactionDate.ToString("dd/MM/yyyy")</td>
                     <td>
@@ -59,7 +72,7 @@
                         <div class="muted" style="font-size:.8rem">@suggestedPath</div>
                     </td>
                     <td>
-                        @if (row.IsDuplicate)
+                        @if (isSkippable)
                         {
                             <span class="muted">—</span>
                         }
@@ -82,9 +95,13 @@
                         }
                     </td>
                     <td>
-                        @if (row.IsDuplicate)
+                        @if (row.DuplicateReason == "ExistsInDb")
                         {
-                            <span class="badge dup">Duplicate</span>
+                            <span class="badge src">Ενημέρωση</span>
+                        }
+                        else if (row.DuplicateReason == "DuplicateInFile")
+                        {
+                            <span class="badge dup">Διπλό (αρχείο)</span>
                         }
                         else
                         {

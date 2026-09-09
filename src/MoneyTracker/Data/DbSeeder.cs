@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using MoneyTracker.Domain;
 
 namespace MoneyTracker.Data;
@@ -7,6 +8,8 @@ public static class DbSeeder
     /// <summary>Seeds reference data that must exist for the app to work. Idempotent.</summary>
     public static void Seed(AppDbContext db)
     {
+        PatchSchema(db);
+
         if (!db.ImportProfiles.Any())
         {
             // Derived from the real Piraeus Bank credit-card export (docs/DESIGN.md §6).
@@ -33,5 +36,22 @@ public static class DbSeeder
             });
             db.SaveChanges();
         }
+    }
+
+    /// <summary>
+    /// Lightweight idempotent column additions so existing databases created by an earlier
+    /// version pick up new columns without being dropped (EnsureCreated does not alter tables).
+    /// </summary>
+    private static void PatchSchema(AppDbContext db)
+    {
+        db.Database.ExecuteSqlRaw(
+            "IF COL_LENGTH('ImportStagingRows','Included') IS NULL " +
+            "ALTER TABLE ImportStagingRows ADD Included bit NOT NULL " +
+            "CONSTRAINT DF_ImportStagingRows_Included DEFAULT(1);");
+
+        db.Database.ExecuteSqlRaw(
+            "IF COL_LENGTH('ImportBatches','UpdatedCount') IS NULL " +
+            "ALTER TABLE ImportBatches ADD UpdatedCount int NOT NULL " +
+            "CONSTRAINT DF_ImportBatches_UpdatedCount DEFAULT(0);");
     }
 }

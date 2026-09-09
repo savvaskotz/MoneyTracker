@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -14,6 +15,16 @@ var builder = WebApplication.CreateBuilder(args);
 // ---- Database ----
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+
+// ---- Data Protection ----
+// Persist the keys used to encrypt the auth/antiforgery cookies to a folder inside the
+// app. On shared IIS hosting (e.g. SmarterASP.NET) the default key location isn't writable
+// or persistent, so cookies set at login can't be decrypted afterwards and login "fails".
+var keysDir = Path.Combine(builder.Environment.ContentRootPath, "keys");
+Directory.CreateDirectory(keysDir);
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDir))
+    .SetApplicationName("MoneyTracker");
 
 // ---- Authentication (single hard-coded user, credentials from configuration) ----
 builder.Services

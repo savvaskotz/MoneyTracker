@@ -130,7 +130,7 @@ dotnet publish src/MoneyTracker/MoneyTracker.csproj -c Release -o publish
 | **HTTP 500.19** | Πρόβλημα στο `web.config` / δεν είναι εγκατεστημένο το ASP.NET Core Module → επιβεβαίωσε ότι ανέβηκε το `web.config` και ότι το app είναι ASP.NET Core. |
 | **Σφάλμα σύνδεσης SQL** | Λάθος connection string ή SSL → βάλε `Encrypt=False;TrustServerCertificate=True`, τσέκαρε server/user/password. |
 | **Cannot open database / login failed** | Ο χρήστης δεν έχει δικαιώματα στη βάση, ή λάθος όνομα βάσης. |
-| **Δεν κρατάει το login** | Βεβαιώσου ότι μπαίνεις μέσω HTTPS (το cookie είναι `SameAsRequest`, δουλεύει και σε http για setup). |
+| **Δεν κρατάει το login / γυρνάει στη σελίδα σύνδεσης** | Τα Data Protection keys πρέπει να αποθηκεύονται σε φάκελο εντός της εφαρμογής (η εφαρμογή φτιάχνει τον φάκελο `keys/` στον root). Βεβαιώσου ότι ο root είναι εγγράψιμος (είναι, μέσω File Manager). |
 | **Θέλω να δω σφάλματα** | Στο `web.config` βάλε `stdoutLogEnabled="true"` προσωρινά και δες το `logs/` στον root. |
 
 ---

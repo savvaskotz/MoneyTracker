@@ -5,6 +5,10 @@
     ViewData["Title"] = "Dashboard";
     string Money(decimal v) => v.ToString("N2") + " €";
     var d = Model.Data;
+    // Passed to the category tree partial so drill-down links keep the active filter.
+    ViewData["Preset"] = Model.Preset;
+    ViewData["From"] = Model.From?.ToString("yyyy-MM-dd");
+    ViewData["To"] = Model.To?.ToString("yyyy-MM-dd");
 }
 
 <h1>Dashboard</h1>
@@ -41,9 +45,7 @@
 </div>
 
 <div class="stat-grid">
-    <div class="stat"><div class="label">Έσοδα</div><div class="value income">@Money(d.TotalIncome)</div></div>
     <div class="stat"><div class="label">Έξοδα</div><div class="value expense">@Money(d.TotalExpenses)</div></div>
-    <div class="stat"><div class="label">Υπόλοιπο</div><div class="value">@Money(d.Balance)</div></div>
     <div class="stat"><div class="label">Κινήσεις</div><div class="value">@d.TransactionCount</div></div>
     <div class="stat"><div class="label">Μέσο έξοδο</div><div class="value">@Money(d.AverageExpense)</div></div>
 </div>

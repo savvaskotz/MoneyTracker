@@ -29,5 +29,10 @@ public class ImportStagingRow
     public SuggestionSource SuggestionSource { get; set; } = SuggestionSource.None;
 
     public bool IsDuplicate { get; set; }
+
+    /// <summary>null = new, "ExistsInDb" = will update existing, "DuplicateInFile" = skipped.</summary>
     public string? DuplicateReason { get; set; }
+
+    /// <summary>Whether this row will be processed on confirm (user can uncheck to skip it).</summary>
+    public bool Included { get; set; } = true;
 }

@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using MoneyTracker.Data;
 using MoneyTracker.Services.Categorization;
 using MoneyTracker.Services.Dashboard;
@@ -13,6 +16,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
+// ---- Data Protection ----
+// Persist the keys used to encrypt the auth/antiforgery cookies to a folder inside the
+// app. On shared IIS hosting (e.g. SmarterASP.NET) the default key location isn't writable
+// or persistent, so cookies set at login can't be decrypted afterwards and login "fails".
+var keysDir = Path.Combine(builder.Environment.ContentRootPath, "keys");
+Directory.CreateDirectory(keysDir);
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDir))
+    .SetApplicationName("MoneyTracker");
+
 // ---- Authentication (single hard-coded user, credentials from configuration) ----
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -24,7 +37,9 @@ builder.Services
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
         options.Cookie.HttpOnly = true;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        // SameAsRequest so login also works over the host's temporary HTTP URL during setup;
+        // in production the site is served over HTTPS and the cookie is secure.
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         options.Cookie.SameSite = SameSiteMode.Lax;
     });
 
@@ -67,7 +82,18 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
+    var creator = db.Database.GetService<IRelationalDatabaseCreator>();
+    if (!creator.Exists())
+    {
+        // Local/dev: the database doesn't exist yet -> create it with the full schema.
+        db.Database.EnsureCreated();
+    }
+    else if (!creator.HasTables())
+    {
+        // Shared hosting (e.g. SmarterASP.NET): the database is pre-created but empty,
+        // so EnsureCreated() would do nothing. Build the schema from the model instead.
+        db.Database.ExecuteSqlRaw(db.Database.GenerateCreateScript());
+    }
     DbSeeder.Seed(db);
 }
 

@@ -9,8 +9,10 @@
 @if (Model.Batch.Status == ImportStatus.Completed)
 {
     <div class="alert ok">
-        Εισήχθησαν <strong>@Model.Batch.NewCount</strong> νέες κινήσεις από το
-        «@Model.Batch.FileName». Παραλείφθηκαν <strong>@Model.Batch.DuplicateCount</strong> διπλότυπα.
+        Από το «@Model.Batch.FileName»:
+        εισήχθησαν <strong>@Model.Batch.NewCount</strong> νέες κινήσεις,
+        ενημερώθηκαν <strong>@Model.Batch.UpdatedCount</strong> υπάρχουσες,
+        παραλείφθηκαν <strong>@Model.Batch.DuplicateCount</strong> διπλότυπα αρχείου.
     </div>
 }
 else

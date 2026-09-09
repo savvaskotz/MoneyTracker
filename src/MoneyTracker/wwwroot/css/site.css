@@ -84,6 +84,12 @@ button.ghost { background: #fff; cursor: pointer; }
 .muted { color: var(--muted); }
 .right { text-align: right; }
 
+/* Collapsible transaction boxes (category detail) */
+details.section > summary { cursor: pointer; display: list-item; padding: .15rem 0; }
+details.section > summary::-webkit-details-marker { color: var(--muted); }
+details.section > summary .sec-title { font-weight: 600; }
+details.section > summary .sec-amount { float: right; font-weight: 700; }
+
 .login-wrap { max-width: 360px; margin: 4rem auto; }
 .login-wrap .card { padding: 1.5rem; }
 .login-wrap .field { margin-bottom: 1rem; display: flex; flex-direction: column; gap: .3rem; }

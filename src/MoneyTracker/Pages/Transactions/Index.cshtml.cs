@@ -27,8 +27,15 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string? Q { get; set; }
 
+    /// <summary>"" = όλες, "none" = χωρίς κατηγορία, ή το id μιας κατηγορίας (μαζί με τα children της).</summary>
+    [BindProperty(SupportsGet = true)]
+    public string? Cat { get; set; }
+
     [BindProperty]
     public Dictionary<long, int?> Selected { get; set; } = new();
+
+    [BindProperty]
+    public long DeleteId { get; set; }
 
     public List<Transaction> Items { get; private set; } = new();
     public List<CategoryOption> CategoryOptions { get; private set; } = new();
@@ -60,6 +67,19 @@ public class IndexModel : PageModel
         return Page();
     }
 
+    public async Task<IActionResult> OnPostDeleteAsync()
+    {
+        var t = await _db.Transactions.FindAsync(DeleteId);
+        if (t != null)
+        {
+            _db.Transactions.Remove(t);
+            await _db.SaveChangesAsync();
+            Message = "Η κίνηση διαγράφηκε.";
+        }
+        await LoadAsync();
+        return Page();
+    }
+
     private async Task LoadAsync()
     {
         var query = _db.Transactions.AsNoTracking().AsQueryable();
@@ -69,6 +89,16 @@ public class IndexModel : PageModel
         {
             var q = Q.Trim();
             query = query.Where(t => t.OriginalDescription.Contains(q) || t.NormalizedDescription.Contains(q));
+        }
+
+        if (Cat == "none")
+        {
+            query = query.Where(t => t.CategoryId == null);
+        }
+        else if (int.TryParse(Cat, out var catId))
+        {
+            // Exact category only (do not include sub-categories).
+            query = query.Where(t => t.CategoryId == catId);
         }
 
         Items = await query

@@ -19,6 +19,9 @@ public interface ICategoryService
     /// <summary>Get-or-create the whole path (e.g. "Σπίτι / Supermarket"). Returns the leaf.</summary>
     Task<Category> EnsurePathAsync(IEnumerable<string> segments);
 
+    /// <summary>Find the leaf of an existing path without creating anything. Null if not found.</summary>
+    Task<Category?> FindByPathAsync(IEnumerable<string> segments);
+
     Task<Category> CreateAsync(string name, int? parentId);
 
     Task MoveAsync(int categoryId, int? newParentId);
@@ -94,6 +97,29 @@ public class CategoryService : ICategoryService
         return current!;
     }
 
+    public async Task<Category?> FindByPathAsync(IEnumerable<string> segments)
+    {
+        var names = segments
+            .Select(s => s?.Trim() ?? string.Empty)
+            .Where(s => s.Length > 0)
+            .Take(MaxDepth)
+            .ToList();
+        if (names.Count == 0) return null;
+
+        int? parentId = null;
+        Category? current = null;
+        foreach (var name in names)
+        {
+            var key = TextNormalizer.Key(name);
+            var pid = parentId;
+            current = await _db.Categories
+                .FirstOrDefaultAsync(c => c.ParentId == pid && c.NormalizedName == key);
+            if (current == null) return null;
+            parentId = current.Id;
+        }
+        return current;
+    }
+
     public async Task<Category> CreateAsync(string name, int? parentId)
     {
         name = (name ?? string.Empty).Trim();
@@ -154,7 +180,9 @@ public class CategoryService : ICategoryService
         }
 
         // Depth check: new base depth + height of the moved subtree must fit in MaxDepth.
-        var childrenByParent = all.GroupBy(c => c.ParentId)
+        var childrenByParent = all
+            .Where(c => c.ParentId != null)
+            .GroupBy(c => c.ParentId!.Value)
             .ToDictionary(g => g.Key, g => g.ToList());
         int subtreeHeight = Height(node.Id, childrenByParent); // node counts as 1
         byte newDepth = (byte)((newParent?.Depth ?? 0) + 1);
@@ -202,7 +230,7 @@ public class CategoryService : ICategoryService
         return string.Join(" → ", names);
     }
 
-    private static int Height(int nodeId, IReadOnlyDictionary<int?, List<Category>> childrenByParent)
+    private static int Height(int nodeId, IReadOnlyDictionary<int, List<Category>> childrenByParent)
     {
         if (!childrenByParent.TryGetValue(nodeId, out var children) || children.Count == 0)
             return 1;
@@ -210,7 +238,7 @@ public class CategoryService : ICategoryService
     }
 
     private static void UpdateDescendantDepths(int nodeId, byte nodeDepth,
-        IReadOnlyDictionary<int?, List<Category>> childrenByParent)
+        IReadOnlyDictionary<int, List<Category>> childrenByParent)
     {
         if (!childrenByParent.TryGetValue(nodeId, out var children)) return;
         foreach (var child in children)

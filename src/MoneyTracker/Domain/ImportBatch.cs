@@ -17,6 +17,7 @@ public class ImportBatch
 
     public int TotalRows { get; set; }
     public int NewCount { get; set; }
+    public int UpdatedCount { get; set; }
     public int DuplicateCount { get; set; }
 
     public DateTime CreatedAt { get; set; }

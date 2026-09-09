@@ -129,8 +129,13 @@ public class CategoryLearningService : ICategoryLearningService
         var pattern = (normalizedDescription ?? string.Empty).Trim().ToUpperInvariant();
         if (pattern.Length == 0) return;
 
-        var rule = await _db.CategoryRules
-            .FirstOrDefaultAsync(r => r.Pattern == pattern && r.MatchType == MatchType.Exact);
+        // Check locally-tracked entities first so repeated calls within the same unsaved
+        // transaction (e.g. several rows with the same merchant) update the pending rule
+        // instead of inserting a duplicate (which would violate the unique index).
+        var rule = _db.CategoryRules.Local
+                       .FirstOrDefault(r => r.Pattern == pattern && r.MatchType == MatchType.Exact)
+                   ?? await _db.CategoryRules
+                       .FirstOrDefaultAsync(r => r.Pattern == pattern && r.MatchType == MatchType.Exact);
 
         var now = DateTime.UtcNow;
         if (rule == null)

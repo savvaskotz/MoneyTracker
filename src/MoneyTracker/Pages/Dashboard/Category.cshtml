@@ -1,0 +1,112 @@
+@page
+@model MoneyTracker.Pages.Dashboard.CategoryModel
+@using MoneyTracker.Domain
+@using MoneyTracker.Services.Dashboard
+@{
+    ViewData["Title"] = Model.Found ? Model.CategoryPath : "Κατηγορία";
+    string Money(decimal v) => v.ToString("N2") + " €";
+}
+
+<p><a asp-page="/Dashboard/Index" asp-route-Preset="@Model.Preset"
+      asp-route-From="@(Model.From?.ToString("yyyy-MM-dd"))"
+      asp-route-To="@(Model.To?.ToString("yyyy-MM-dd"))">← Πίσω στο Dashboard</a></p>
+
+@if (!Model.Found)
+{
+    <div class="alert error">Η κατηγορία δεν βρέθηκε.</div>
+    return;
+}
+
+<h1>@Model.CategoryPath</h1>
+
+<div class="card">
+    <form method="get" class="filters">
+        <input type="hidden" name="Id" value="@Model.Id" />
+        <div class="field">
+            <label>Περίοδος</label>
+            <select name="Preset" onchange="this.form.submit()">
+                @foreach (var p in Enum.GetValues<DateRangePreset>())
+                {
+                    if (Model.Preset == p)
+                    {
+                        <option value="@p" selected>@PresetLabel(p)</option>
+                    }
+                    else
+                    {
+                        <option value="@p">@PresetLabel(p)</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="field">
+            <label>Από</label>
+            <input type="date" name="From" value="@(Model.From?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="field">
+            <label>Έως</label>
+            <input type="date" name="To" value="@(Model.To?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <button type="submit" class="primary">Εφαρμογή</button>
+        <span class="muted" style="align-self:center">@Model.RangeFrom.ToString("dd/MM/yyyy") – @Model.RangeTo.ToString("dd/MM/yyyy")</span>
+    </form>
+</div>
+
+<div class="stat-grid">
+    <div class="stat">
+        <div class="label">Σύνολο @Model.CategoryPath</div>
+        <div class="value expense">@Money(Model.Total)</div>
+    </div>
+</div>
+
+@foreach (var s in Model.Sections)
+{
+    <div class="card">
+        <h2 style="display:flex; justify-content:space-between; align-items:baseline;">
+            <span>@(s.IsSelf ? $"Άμεσες κινήσεις · {s.Path}" : s.Path)</span>
+            <span class="value expense" style="font-size:1.1rem">@Money(s.Subtotal)</span>
+        </h2>
+        @if (s.Transactions.Count == 0)
+        {
+            <p class="muted">Καμία άμεση κίνηση σε αυτή την κατηγορία στην περίοδο.</p>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Ημ/νία</th><th>Περιγραφή</th><th class="num">Ποσό</th></tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var t in s.Transactions)
+                    {
+                        <tr>
+                            <td>@t.TransactionDate.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                @t.OriginalDescription
+                                <div class="muted" style="font-size:.8rem">@t.NormalizedDescription</div>
+                            </td>
+                            <td class="num @(t.Type == TransactionType.Expense ? "value expense" : "value income")"
+                                style="font-size:1rem">
+                                @(t.Type == TransactionType.Expense ? "-" : "+")@Money(t.Amount)
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
+
+@functions {
+    static string PresetLabel(DateRangePreset p) => p switch
+    {
+        DateRangePreset.Today => "Σήμερα",
+        DateRangePreset.ThisWeek => "Αυτή η εβδομάδα",
+        DateRangePreset.ThisMonth => "Αυτός ο μήνας",
+        DateRangePreset.PreviousMonth => "Προηγούμενος μήνας",
+        DateRangePreset.ThisYear => "Φέτος",
+        DateRangePreset.Custom => "Προσαρμοσμένο",
+        _ => p.ToString()
+    };
+}

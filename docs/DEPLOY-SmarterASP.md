@@ -135,6 +135,39 @@ dotnet publish src/MoneyTracker/MoneyTracker.csproj -c Release -o publish
 
 ---
 
+## Αυτόματο deploy μέσω GitHub Actions (FTP)
+
+Υπάρχει έτοιμο workflow: `.github/workflows/deploy-smarterasp.yml`. Κάνει build + publish και
+ανεβάζει **μόνο τα αλλαγμένα αρχεία** μέσω FTP. Δεν πειράζει ποτέ `appsettings*.json`, `keys/`, `logs/`.
+
+### 1. Βρες τα FTP στοιχεία σου
+SmarterASP Control Panel → **Websites → (το site σου)** → εμφανίζει **FTP address / username / password**
+(ή τα όρισες εσύ). Το FTP address είναι κάτι σαν `ftp.site4now.net` ή μια IP.
+
+### 2. Πρόσθεσε GitHub Secrets
+Στο repo: **Settings → Secrets and variables → Actions → New repository secret**:
+
+| Secret | Τιμή |
+| --- | --- |
+| `FTP_SERVER` | το FTP host (μόνο host, χωρίς `ftp://`) |
+| `FTP_USERNAME` | το FTP username |
+| `FTP_PASSWORD` | το FTP password |
+
+(Προαιρετικά, αν το site σου ΔΕΝ είναι στον root του FTP: πρόσθεσε **Variable** `FTP_SERVER_DIR`
+με τον φάκελο, π.χ. `/site/wwwroot/`.)
+
+### 3. Πού μπαίνουν τα secrets της εφαρμογής
+Επειδή το workflow **δεν** ανεβάζει `appsettings.json`, βάλε το **connection string** και το
+**Auth:Password** στο `appsettings.json` **πάνω στον server** (μία φορά, μέσω File Manager).
+Έτσι δεν μπαίνουν ποτέ στο git και δεν χάνονται σε κάθε deploy.
+
+### 4. Ενεργοποίηση
+Το workflow τρέχει σε κάθε **push στο `main`** (ή χειροκίνητα: **Actions → Deploy to SmarterASP.NET → Run workflow**).
+Κάνε merge το PR στο `main` και από εκεί και πέρα κάθε αλλαγή ανεβαίνει μόνη της.
+
+> Το workflow βάζει προσωρινά `app_offline.htm` (για να ξεκλειδώσει το DLL), ανεβάζει, και το
+> αφαιρεί — οπότε δεν κολλάει το site offline. Αν το host θέλει FTPS, άλλαξε `protocol: ftp` → `ftps`.
+
 ## Updates αργότερα
 
 Για νέα έκδοση: `dotnet publish` ξανά και ανέβασε τα αρχεία (overwrite). Το schema

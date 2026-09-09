@@ -1,0 +1,67 @@
+name: Deploy to SmarterASP.NET
+
+# Runs on every push to main, or manually from the Actions tab (Run workflow).
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: smarterasp-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # Framework-dependent, Windows apphost (produces MoneyTracker.exe + web.config
+      # with processPath=.\MoneyTracker.exe). The server already has the .NET 8 runtime.
+      # If you ever get HTTP 500.30/500.31, switch --self-contained to true.
+      - name: Publish
+        run: >
+          dotnet publish src/MoneyTracker/MoneyTracker.csproj
+          -c Release -r win-x64 --self-contained false
+          -o publish
+
+      # Stop the app so IIS releases the locked DLLs, then wait a moment.
+      - name: Take app offline
+        run: |
+          echo "<html><body>Updating, back in a moment…</body></html>" > app_offline.htm
+          curl -sS --fail -T app_offline.htm \
+            "ftp://${{ secrets.FTP_SERVER }}/app_offline.htm" \
+            --user "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}"
+          sleep 8
+
+      # Incremental sync: only changed files are uploaded (state kept on the server).
+      # appsettings*.json, keys/ and logs/ are NEVER touched, so your server config,
+      # data-protection keys and logs survive every deploy.
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp            # set to ftps if your host requires it
+          local-dir: ./publish/
+          server-dir: ${{ vars.FTP_SERVER_DIR || './' }}
+          exclude: |
+            **/appsettings.json
+            **/appsettings.Development.json
+            **/keys/**
+            **/logs/**
+            app_offline.htm
+
+      # Bring the app back online (delete the marker). Runs even if the deploy failed,
+      # so the site never stays stuck offline.
+      - name: Bring app online
+        if: always()
+        run: |
+          curl -sS "ftp://${{ secrets.FTP_SERVER }}/" \
+            --user "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" \
+            -Q "DELE app_offline.htm" || true

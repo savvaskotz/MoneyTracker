@@ -55,7 +55,8 @@ public class CategoryModel : PageModel
         CategoryPath = BuildPath(Id, byId);
 
         var childrenByParent = cats
-            .GroupBy(c => c.ParentId)
+            .Where(c => c.ParentId != null)
+            .GroupBy(c => c.ParentId!.Value)
             .ToDictionary(g => g.Key, g => g.OrderBy(x => x.Name).Select(x => x.Id).ToList());
 
         // Ordered list of category ids: the selected one first, then descendants (DFS).

@@ -117,7 +117,8 @@ public class IndexModel : PageModel
             .Select(c => new { c.Id, c.ParentId })
             .ToListAsync();
         var childrenByParent = cats
-            .GroupBy(c => c.ParentId)
+            .Where(c => c.ParentId != null)
+            .GroupBy(c => c.ParentId!.Value)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Id).ToList());
 
         var ids = new HashSet<int> { categoryId };

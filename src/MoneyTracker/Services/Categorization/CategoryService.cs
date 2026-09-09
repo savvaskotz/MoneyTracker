@@ -180,7 +180,9 @@ public class CategoryService : ICategoryService
         }
 
         // Depth check: new base depth + height of the moved subtree must fit in MaxDepth.
-        var childrenByParent = all.GroupBy(c => c.ParentId)
+        var childrenByParent = all
+            .Where(c => c.ParentId != null)
+            .GroupBy(c => c.ParentId!.Value)
             .ToDictionary(g => g.Key, g => g.ToList());
         int subtreeHeight = Height(node.Id, childrenByParent); // node counts as 1
         byte newDepth = (byte)((newParent?.Depth ?? 0) + 1);
@@ -228,7 +230,7 @@ public class CategoryService : ICategoryService
         return string.Join(" → ", names);
     }
 
-    private static int Height(int nodeId, IReadOnlyDictionary<int?, List<Category>> childrenByParent)
+    private static int Height(int nodeId, IReadOnlyDictionary<int, List<Category>> childrenByParent)
     {
         if (!childrenByParent.TryGetValue(nodeId, out var children) || children.Count == 0)
             return 1;
@@ -236,7 +238,7 @@ public class CategoryService : ICategoryService
     }
 
     private static void UpdateDescendantDepths(int nodeId, byte nodeDepth,
-        IReadOnlyDictionary<int?, List<Category>> childrenByParent)
+        IReadOnlyDictionary<int, List<Category>> childrenByParent)
     {
         if (!childrenByParent.TryGetValue(nodeId, out var children)) return;
         foreach (var child in children)

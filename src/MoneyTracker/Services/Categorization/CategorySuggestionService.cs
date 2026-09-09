@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MoneyTracker.Data;
 using MoneyTracker.Domain;
+using MatchType = MoneyTracker.Domain.MatchType; // disambiguate from System.IO.MatchType
 
 namespace MoneyTracker.Services.Categorization;
 

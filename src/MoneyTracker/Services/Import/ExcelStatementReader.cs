@@ -30,11 +30,16 @@ public class ExcelStatementReader : IExcelStatementReader
             return result;
         }
 
-        // Card/account identifier from the preamble above the header row.
-        result.AccountIdentifier = FindAccountIdentifier(ws, profile.HeaderRowIndex);
+        // Find the header row. Different exports put it in different places (row 1 with no
+        // preamble, or lower after bank/card lines), so we detect it rather than trust a
+        // fixed index; profile.HeaderRowIndex is only a fallback.
+        int headerRow = DetectHeaderRow(ws, profile);
+
+        // Card/account identifier from the preamble above the header row (if any).
+        result.AccountIdentifier = FindAccountIdentifier(ws, headerRow);
 
         // Map header text -> column number.
-        var columns = MapColumns(ws, profile.HeaderRowIndex);
+        var columns = MapColumns(ws, headerRow);
 
         int Col(string? header)
         {
@@ -63,10 +68,10 @@ public class ExcelStatementReader : IExcelStatementReader
             NumberGroupSeparator = profile.GroupSeparator
         };
 
-        int lastRow = ws.LastRowUsed()?.RowNumber() ?? profile.HeaderRowIndex;
+        int lastRow = ws.LastRowUsed()?.RowNumber() ?? headerRow;
         int rowIndex = 0;
 
-        for (int r = profile.HeaderRowIndex + 1; r <= lastRow; r++)
+        for (int r = headerRow + 1; r <= lastRow; r++)
         {
             var dateText = ws.Cell(r, dateCol).GetString().Trim();
             if (dateText.Length == 0) continue; // blank spacer row
@@ -133,6 +138,42 @@ public class ExcelStatementReader : IExcelStatementReader
             if (match != null) return match;
         }
         return wb.Worksheets.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Detects the row that holds the column headers by looking for the row that contains
+    /// both the date and description headers (plus an amount source). Falls back to the
+    /// profile's configured HeaderRowIndex when nothing matches.
+    /// </summary>
+    private static int DetectHeaderRow(IXLWorksheet ws, ImportProfile profile)
+    {
+        var required = new List<string>();
+        if (!string.IsNullOrWhiteSpace(profile.DateColumn)) required.Add(profile.DateColumn.Trim().ToUpperInvariant());
+        if (!string.IsNullOrWhiteSpace(profile.DescriptionColumn)) required.Add(profile.DescriptionColumn.Trim().ToUpperInvariant());
+
+        var amountHeaders = new[] { profile.AmountColumn, profile.DebitColumn, profile.CreditColumn }
+            .Where(h => !string.IsNullOrWhiteSpace(h))
+            .Select(h => h!.Trim().ToUpperInvariant())
+            .ToList();
+
+        int lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
+        int scanTo = Math.Min(lastRow, 30);
+
+        for (int r = 1; r <= scanTo; r++)
+        {
+            var headers = ws.Row(r).CellsUsed()
+                .Select(c => c.GetString().Trim().ToUpperInvariant())
+                .Where(s => s.Length > 0)
+                .ToHashSet();
+            if (headers.Count == 0) continue;
+
+            bool hasRequired = required.All(headers.Contains);
+            bool hasAmount = amountHeaders.Count == 0 || amountHeaders.Any(headers.Contains);
+            if (hasRequired && hasAmount)
+                return r;
+        }
+
+        return profile.HeaderRowIndex > 0 ? profile.HeaderRowIndex : 1;
     }
 
     private static string? FindAccountIdentifier(IXLWorksheet ws, int headerRowIndex)

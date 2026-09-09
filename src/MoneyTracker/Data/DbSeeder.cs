@@ -14,7 +14,9 @@ public static class DbSeeder
             {
                 Name = "Τράπεζα Πειραιώς – Πιστωτική κάρτα",
                 SheetName = "Κινήσεις Πιστωτικών Καρτών",
-                HeaderRowIndex = 6,
+                // Headers are on the first row; the reader also auto-detects the header
+                // row, so exports that add preamble lines above it still work.
+                HeaderRowIndex = 1,
                 DateColumn = "Ημ/νία Συναλλαγής",
                 DescriptionColumn = "Περιγραφή Συναλλαγής",
                 AmountColumn = "Ποσό",

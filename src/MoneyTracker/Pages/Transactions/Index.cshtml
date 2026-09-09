@@ -1,0 +1,82 @@
+@page
+@model MoneyTracker.Pages.Transactions.IndexModel
+@using MoneyTracker.Domain
+@{
+    ViewData["Title"] = "Κινήσεις";
+    string Money(decimal v) => v.ToString("N2") + " €";
+}
+<h1>Κινήσεις</h1>
+
+@if (!string.IsNullOrEmpty(Model.Message))
+{
+    <div class="alert ok">@Model.Message</div>
+}
+
+<div class="card">
+    <form method="get" class="filters">
+        <div class="field">
+            <label>Από</label>
+            <input type="date" name="From" value="@(Model.From?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="field">
+            <label>Έως</label>
+            <input type="date" name="To" value="@(Model.To?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="field">
+            <label>Αναζήτηση</label>
+            <input type="text" name="Q" value="@Model.Q" placeholder="περιγραφή..." />
+        </div>
+        <button type="submit" class="primary">Φίλτρο</button>
+    </form>
+</div>
+
+<form method="post">
+    <div class="table-wrap card">
+        <table>
+            <thead>
+                <tr>
+                    <th>Ημ/νία</th>
+                    <th>Περιγραφή</th>
+                    <th class="num">Ποσό</th>
+                    <th>Κατηγορία</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var t in Model.Items)
+            {
+                <tr>
+                    <td>@t.TransactionDate.ToString("dd/MM/yyyy")</td>
+                    <td>
+                        @t.OriginalDescription
+                        <div class="muted" style="font-size:.8rem">@t.NormalizedDescription</div>
+                    </td>
+                    <td class="num @(t.Type == TransactionType.Expense ? "value expense" : "value income")"
+                        style="font-size:1rem">
+                        @(t.Type == TransactionType.Expense ? "-" : "+")@Money(t.Amount)
+                    </td>
+                    <td>
+                        <select name="Selected[@t.Id]">
+                            <option value="">— Χωρίς κατηγορία —</option>
+                            @foreach (var opt in Model.CategoryOptions)
+                            {
+                                if (t.CategoryId == opt.Id)
+                                {
+                                    <option value="@opt.Id" selected>@opt.Path</option>
+                                }
+                                else
+                                {
+                                    <option value="@opt.Id">@opt.Path</option>
+                                }
+                            }
+                        </select>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <div class="card">
+        <button type="submit" asp-page-handler="Save" class="primary">Αποθήκευση κατηγοριών</button>
+        <span class="muted"> Εμφανίζονται έως 500 κινήσεις.</span>
+    </div>
+</form>

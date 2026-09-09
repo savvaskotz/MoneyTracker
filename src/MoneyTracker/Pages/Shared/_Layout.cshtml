@@ -1,0 +1,40 @@
+@{
+    var user = User?.Identity;
+    bool signedIn = user?.IsAuthenticated == true;
+}
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · MoneyTracker</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand"><a asp-page="/Dashboard/Index">💶 MoneyTracker</a></div>
+        @if (signedIn)
+        {
+            <nav class="mainnav">
+                <a asp-page="/Dashboard/Index">Dashboard</a>
+                <a asp-page="/Import/Upload">Εισαγωγή Excel</a>
+                <a asp-page="/Transactions/Index">Κινήσεις</a>
+                <a asp-page="/Categories/Index">Κατηγορίες</a>
+            </nav>
+            <form class="logout" asp-page="/Account/Logout" method="post">
+                <span class="who">@user!.Name</span>
+                <button type="submit" class="linkbtn">Αποσύνδεση</button>
+            </form>
+        }
+    </header>
+
+    <main class="content">
+        @RenderBody()
+    </main>
+
+    <footer class="footer">
+        <span>MoneyTracker — προσωπική παρακολούθηση εξόδων</span>
+    </footer>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

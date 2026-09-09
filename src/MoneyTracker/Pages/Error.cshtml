@@ -1,0 +1,14 @@
+@page
+@model MoneyTracker.Pages.ErrorModel
+@{
+    ViewData["Title"] = "Σφάλμα";
+}
+<div class="card">
+    <h1>Παρουσιάστηκε σφάλμα</h1>
+    <p class="muted">Κάτι πήγε στραβά κατά την επεξεργασία του αιτήματος.</p>
+    @if (Model.ShowRequestId)
+    {
+        <p><strong>Request ID:</strong> <code>@Model.RequestId</code></p>
+    }
+    <p><a asp-page="/Dashboard/Index">Επιστροφή στο Dashboard</a></p>
+</div>

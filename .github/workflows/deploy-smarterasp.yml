@@ -20,13 +20,13 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      # Framework-dependent, Windows apphost (produces MoneyTracker.exe + web.config
-      # with processPath=.\MoneyTracker.exe). The server already has the .NET 8 runtime.
-      # If you ever get HTTP 500.30/500.31, switch --self-contained to true.
+      # Framework-dependent, NO apphost: web.config launches `dotnet .\MoneyTracker.dll`,
+      # which runs on the server's shared .NET 8 runtime regardless of app-pool bitness.
+      # (The repo's src/MoneyTracker/web.config controls the ANCM settings.)
       - name: Publish
         run: >
           dotnet publish src/MoneyTracker/MoneyTracker.csproj
-          -c Release -r win-x64 --self-contained false
+          -c Release -p:UseAppHost=false
           -o publish
 
       # Stop the app so IIS releases the locked DLLs, then wait a moment.

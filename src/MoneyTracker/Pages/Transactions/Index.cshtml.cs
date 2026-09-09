@@ -97,8 +97,8 @@ public class IndexModel : PageModel
         }
         else if (int.TryParse(Cat, out var catId))
         {
-            var ids = await DescendantCategoryIdsAsync(catId);
-            query = query.Where(t => t.CategoryId != null && ids.Contains(t.CategoryId.Value));
+            // Exact category only (do not include sub-categories).
+            query = query.Where(t => t.CategoryId == catId);
         }
 
         Items = await query
@@ -108,29 +108,5 @@ public class IndexModel : PageModel
             .ToListAsync();
 
         CategoryOptions = await _categories.GetOptionsAsync();
-    }
-
-    /// <summary>The category plus all its descendants (depth ≤ 3), so filtering a parent includes children.</summary>
-    private async Task<HashSet<int>> DescendantCategoryIdsAsync(int categoryId)
-    {
-        var cats = await _db.Categories.AsNoTracking()
-            .Select(c => new { c.Id, c.ParentId })
-            .ToListAsync();
-        var childrenByParent = cats
-            .Where(c => c.ParentId != null)
-            .GroupBy(c => c.ParentId!.Value)
-            .ToDictionary(g => g.Key, g => g.Select(x => x.Id).ToList());
-
-        var ids = new HashSet<int> { categoryId };
-        var stack = new Stack<int>();
-        stack.Push(categoryId);
-        while (stack.Count > 0)
-        {
-            var cur = stack.Pop();
-            if (childrenByParent.TryGetValue(cur, out var children))
-                foreach (var c in children)
-                    if (ids.Add(c)) stack.Push(c);
-        }
-        return ids;
     }
 }

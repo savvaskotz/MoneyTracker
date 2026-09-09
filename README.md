@@ -79,6 +79,13 @@ src/MoneyTracker/
 └── wwwroot/        # CSS
 ```
 
+## Deployment
+
+- **SmarterASP.NET** (Windows/IIS shared hosting): δες [`docs/DEPLOY-SmarterASP.md`](docs/DEPLOY-SmarterASP.md).
+
+Στο πρώτο τρέξιμο η εφαρμογή δημιουργεί το schema ακόμη κι όταν η βάση προϋπάρχει άδεια
+(shared hosting) — δεν χρειάζεται χειροκίνητο SQL script.
+
 ## Βάση δεδομένων / migrations
 
 Η v1 δημιουργεί το schema με `EnsureCreated()` στο startup (τρέχει χωρίς EF tooling).

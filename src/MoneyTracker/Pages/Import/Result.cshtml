@@ -1,0 +1,24 @@
+@page "{id:int}"
+@model MoneyTracker.Pages.Import.ResultModel
+@using MoneyTracker.Domain
+@{
+    ViewData["Title"] = "Import ολοκληρώθηκε";
+}
+<h1>Import ολοκληρώθηκε</h1>
+
+@if (Model.Batch.Status == ImportStatus.Completed)
+{
+    <div class="alert ok">
+        Εισήχθησαν <strong>@Model.Batch.NewCount</strong> νέες κινήσεις από το
+        «@Model.Batch.FileName». Παραλείφθηκαν <strong>@Model.Batch.DuplicateCount</strong> διπλότυπα.
+    </div>
+}
+else
+{
+    <div class="alert">Κατάσταση import: @Model.Batch.Status</div>
+}
+
+<div class="card" style="display:flex; gap:.75rem;">
+    <a class="primary" style="padding:.5rem .8rem; border-radius:8px; color:#fff;" asp-page="/Dashboard/Index">Στο Dashboard</a>
+    <a class="ghost" style="padding:.5rem .8rem; border-radius:8px;" asp-page="/Import/Upload">Νέα εισαγωγή</a>
+</div>

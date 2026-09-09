@@ -1,0 +1,35 @@
+@model MoneyTracker.Services.Dashboard.CategoryTotalNode
+@{
+    string Money(decimal v) => v.ToString("N2") + " €";
+}
+<li>
+    @if (Model.Children.Any())
+    {
+        <details>
+            <summary>
+                <span>@Model.Name</span>
+                <span class="right">@Money(Model.Total)</span>
+            </summary>
+            <ul class="tree child">
+                @foreach (var c in Model.Children)
+                {
+                    <partial name="_CategoryNode" model="c" />
+                }
+                @if (Model.Direct > 0)
+                {
+                    <li>
+                        <span class="muted">(άμεσα σε @Model.Name)</span>
+                        <span class="right">@Money(Model.Direct)</span>
+                    </li>
+                }
+            </ul>
+        </details>
+    }
+    else
+    {
+        <div style="display:flex; justify-content:space-between;">
+            <span>@Model.Name</span>
+            <span class="right">@Money(Model.Total)</span>
+        </div>
+    }
+</li>

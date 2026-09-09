@@ -429,3 +429,44 @@ grouped-by-category sums (φθηνό, χωρίς heavy recursive SQL). Drill-dow
 
 Μόλις συμφωνήσουμε, προχωράω στη σειρά της §20:
 schema → entities → migration → import → duplicate → suggestion → preview → υλοποίηση.
+
+---
+
+## 14. Αποφάσεις υλοποίησης v1 (μετά το δείγμα Excel)
+
+Το δείγμα ήταν export **Τράπεζας Πειραιώς – Πιστωτικής κάρτας**. Αποφάσεις που κλείδωσαν:
+
+- **Stack:** ASP.NET Core 8 Razor Pages, EF Core, SQL Server, ClosedXML — όπως προτάθηκε.
+- **User:** ένας hard-coded χρήστης (cookie authentication), credentials από configuration
+  (`Auth:Username` / `Auth:Password`). Default: `admin` / `MoneyTracker#2026` (άλλαξέ τα).
+- **Amount + Type:** θετικό magnitude + `Type`. Στην πιστωτική κάρτα το **θετικό ποσό = έξοδο**
+  και το **αρνητικό = πίστωση/επιστροφή** → `Income`. Ρυθμίζεται από `ImportProfile.PositiveIsExpense`.
+- **DB creation:** v1 με `EnsureCreated()` για να τρέχει χωρίς EF tooling· εύκολη μετάβαση σε
+  migrations (βλ. §4 και README).
+
+### Piraeus import profile (seed)
+
+| Ρύθμιση | Τιμή |
+| --- | --- |
+| Sheet | `Κινήσεις Πιστωτικών Καρτών` |
+| Header row | 6 |
+| Date | `Ημ/νία Συναλλαγής` (`dd/MM/yyyy`) |
+| Description | `Περιγραφή Συναλλαγής` |
+| Amount | `Ποσό` (decimal `,`) |
+| Category | `Κατηγορία` (hierarchy με ` / `) |
+| Reference | `Αριθμός Παραστατικού` |
+| Currency | `Νόμισμα` |
+
+Παρατηρήσεις από το πραγματικό αρχείο που καθόρισαν το design:
+
+- Ο **Αριθμός Παραστατικού δεν είναι μοναδικός ανά γραμμή** (κοινός σε δόσεις μιας συναλλαγής),
+  γι' αυτό μπαίνει ως **component** του fingerprint, όχι ως μοναδικό κλειδί — και κρατάμε το
+  **occurrence ordinal** ως βασικό safety net (§7).
+- Η **περιγραφή** έχει μορφή `ΑΓΟΡΑ -MERCHANT      CITY      GR`: το normalization αφαιρεί το
+  prefix και κρατά τον merchant ως το πρώτο chunk πριν από 2+ κενά (§10).
+- Η **κατηγορία της τράπεζας** είναι 2 επιπέδων (`Σπίτι / Supermarket`) → seed του δέντρου
+  κατηγοριών και ισχυρή αρχική πρόταση. Το `Χωρίς Κατηγορία` / `Ανακατανομή` → uncategorized.
+- Footer `Ημερομηνία Ενημέρωσης:` και κενές γραμμές αγνοούνται (μη-parseable ημερομηνία).
+
+> Σημείωση: ο κώδικας δεν έχει γίνει compile σε αυτό το περιβάλλον (δεν υπάρχει .NET SDK /
+> το egress policy μπλοκάρει το κατέβασμα). Χρειάζεται ένα `dotnet build`/`dotnet run` τοπικά.

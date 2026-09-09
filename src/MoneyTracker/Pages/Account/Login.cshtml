@@ -1,0 +1,27 @@
+@page
+@model MoneyTracker.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Σύνδεση";
+    Layout = "_Layout";
+}
+<div class="login-wrap">
+    <h1>Σύνδεση</h1>
+    @if (!string.IsNullOrEmpty(Model.Error))
+    {
+        <div class="alert error">@Model.Error</div>
+    }
+    <div class="card">
+        <form method="post">
+            <div class="field">
+                <label asp-for="Input.Username">Όνομα χρήστη</label>
+                <input asp-for="Input.Username" autocomplete="username" autofocus />
+            </div>
+            <div class="field">
+                <label asp-for="Input.Password">Κωδικός</label>
+                <input asp-for="Input.Password" type="password" autocomplete="current-password" />
+            </div>
+            <input type="hidden" asp-for="ReturnUrl" />
+            <button type="submit" class="primary">Σύνδεση</button>
+        </form>
+    </div>
+</div>

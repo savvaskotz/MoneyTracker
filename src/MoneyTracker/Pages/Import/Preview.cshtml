@@ -1,0 +1,104 @@
+@page "{id:int}"
+@model MoneyTracker.Pages.Import.PreviewModel
+@using MoneyTracker.Domain
+@{
+    ViewData["Title"] = "Preview εισαγωγής";
+    string Money(decimal v) => v.ToString("N2") + " €";
+    string SrcLabel(SuggestionSource s) => s switch
+    {
+        SuggestionSource.UserRule => "Κανόνας",
+        SuggestionSource.History => "Ιστορικό",
+        SuggestionSource.LearnedRule => "Εκμάθηση",
+        SuggestionSource.BankCategory => "Τράπεζα",
+        _ => "—"
+    };
+}
+
+<h1>Preview εισαγωγής</h1>
+<div class="card">
+    <strong>@Model.Batch.FileName</strong>
+    <span class="muted"> · Σύνολο: @Model.Batch.TotalRows ·
+        <span class="badge new">Νέες @Model.Batch.NewCount</span>
+        <span class="badge dup">Διπλότυπα @Model.Batch.DuplicateCount</span>
+    </span>
+    <p class="muted">Άλλαξε κατηγορίες όπου χρειάζεται και πάτησε «Επιβεβαίωση εισαγωγής». Τα διπλότυπα δεν θα εισαχθούν.</p>
+</div>
+
+<form method="post">
+    <div class="table-wrap card">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Ημ/νία</th>
+                    <th>Περιγραφή</th>
+                    <th class="num">Ποσό</th>
+                    <th>Πρόταση</th>
+                    <th>Κατηγορία</th>
+                    <th>Κατάσταση</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var row in Model.Rows)
+            {
+                var suggestedPath = row.SuggestedCategoryId is int sid && Model.CategoryPaths.TryGetValue(sid, out var p)
+                    ? p : "Δεν βρέθηκε κατηγορία";
+                <tr>
+                    <td class="muted">@row.RowIndex</td>
+                    <td>@row.TransactionDate.ToString("dd/MM/yyyy")</td>
+                    <td>
+                        @row.OriginalDescription
+                        <div class="muted" style="font-size:.8rem">@row.NormalizedDescription</div>
+                    </td>
+                    <td class="num @(row.Type == TransactionType.Expense ? "value expense" : "value income")"
+                        style="font-size:1rem">
+                        @(row.Type == TransactionType.Expense ? "-" : "+")@Money(row.Amount)
+                    </td>
+                    <td>
+                        <span class="badge src">@SrcLabel(row.SuggestionSource)</span>
+                        <div class="muted" style="font-size:.8rem">@suggestedPath</div>
+                    </td>
+                    <td>
+                        @if (row.IsDuplicate)
+                        {
+                            <span class="muted">—</span>
+                        }
+                        else
+                        {
+                            <select name="Selected[@row.Id]">
+                                <option value="">— Χωρίς κατηγορία —</option>
+                                @foreach (var opt in Model.CategoryOptions)
+                                {
+                                    if (row.SelectedCategoryId == opt.Id)
+                                    {
+                                        <option value="@opt.Id" selected>@opt.Path</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@opt.Id">@opt.Path</option>
+                                    }
+                                }
+                            </select>
+                        }
+                    </td>
+                    <td>
+                        @if (row.IsDuplicate)
+                        {
+                            <span class="badge dup">Duplicate</span>
+                        }
+                        else
+                        {
+                            <span class="badge new">New</span>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card" style="display:flex; gap:.75rem;">
+        <button type="submit" asp-page-handler="Confirm" class="primary">Επιβεβαίωση εισαγωγής</button>
+        <button type="submit" asp-page-handler="Cancel" class="ghost">Ακύρωση</button>
+    </div>
+</form>

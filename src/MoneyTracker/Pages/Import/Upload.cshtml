@@ -1,0 +1,33 @@
+@page
+@model MoneyTracker.Pages.Import.UploadModel
+@{
+    ViewData["Title"] = "Εισαγωγή Excel";
+}
+<h1>Εισαγωγή κινήσεων από Excel</h1>
+
+@if (Model.Errors.Count > 0)
+{
+    <div class="alert error">
+        <strong>Το αρχείο δεν μπόρεσε να διαβαστεί:</strong>
+        <ul>
+            @foreach (var e in Model.Errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="card">
+    <form method="post" enctype="multipart/form-data">
+        <div class="field">
+            <label asp-for="File">Αρχείο Excel (.xlsx)</label>
+            <input asp-for="File" type="file" accept=".xlsx" />
+        </div>
+        <p class="muted">
+            Το αρχείο διαβάζεται και εμφανίζεται preview. Καμία κίνηση δεν αποθηκεύεται
+            πριν την επιβεβαίωσή σου.
+        </p>
+        <button type="submit" class="primary">Ανέβασμα &amp; Preview</button>
+    </form>
+</div>

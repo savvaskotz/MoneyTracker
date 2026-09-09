@@ -1,0 +1,76 @@
+@page
+@model MoneyTracker.Pages.Categories.IndexModel
+@{
+    ViewData["Title"] = "Κατηγορίες";
+}
+<h1>Κατηγορίες</h1>
+<p class="muted">Ιεραρχία έως 3 επιπέδων. Οι υπολογισμοί των γονικών κατηγοριών στο Dashboard περιλαμβάνουν όλες τις υποκατηγορίες.</p>
+
+@if (!string.IsNullOrEmpty(Model.Error))
+{
+    <div class="alert error">@Model.Error</div>
+}
+@if (!string.IsNullOrEmpty(Model.Message))
+{
+    <div class="alert ok">@Model.Message</div>
+}
+
+<div class="card">
+    <h2>Νέα κατηγορία</h2>
+    <form method="post" class="filters">
+        <div class="field">
+            <label>Όνομα</label>
+            <input name="NewName" required />
+        </div>
+        <div class="field">
+            <label>Γονική (προαιρετικό)</label>
+            <select name="NewParentId">
+                <option value="">— Root (επίπεδο 1) —</option>
+                @foreach (var opt in Model.Options.Where(o => o.Depth < 3))
+                {
+                    <option value="@opt.Id">@opt.Path</option>
+                }
+            </select>
+        </div>
+        <button type="submit" asp-page-handler="Create" class="primary">Δημιουργία</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Υπάρχουσες κατηγορίες</h2>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Διαδρομή</th><th>Επίπεδο</th><th>Μετακίνηση</th><th></th></tr>
+            </thead>
+            <tbody>
+            @foreach (var opt in Model.Options)
+            {
+                <tr>
+                    <td>@opt.Path</td>
+                    <td>@opt.Depth</td>
+                    <td>
+                        <form method="post" style="display:flex; gap:.4rem;">
+                            <input type="hidden" name="MoveId" value="@opt.Id" />
+                            <select name="MoveParentId">
+                                <option value="">— Root —</option>
+                                @foreach (var target in Model.Options.Where(o => o.Id != opt.Id && o.Depth < 3))
+                                {
+                                    <option value="@target.Id">@target.Path</option>
+                                }
+                            </select>
+                            <button type="submit" asp-page-handler="Move" class="ghost">Μετακίνηση</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form method="post" onsubmit="return confirm('Διαγραφή κατηγορίας;');">
+                            <input type="hidden" name="DeleteId" value="@opt.Id" />
+                            <button type="submit" asp-page-handler="Delete" class="ghost">Διαγραφή</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

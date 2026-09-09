@@ -61,40 +61,45 @@
 @foreach (var s in Model.Sections)
 {
     <div class="card">
-        <h2 style="display:flex; justify-content:space-between; align-items:baseline;">
-            <span>@(s.IsSelf ? $"Άμεσες κινήσεις · {s.Path}" : s.Path)</span>
-            <span class="value expense" style="font-size:1.1rem">@Money(s.Subtotal)</span>
-        </h2>
-        @if (s.Transactions.Count == 0)
-        {
-            <p class="muted">Καμία άμεση κίνηση σε αυτή την κατηγορία στην περίοδο.</p>
-        }
-        else
-        {
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr><th>Ημ/νία</th><th>Περιγραφή</th><th class="num">Ποσό</th></tr>
-                    </thead>
-                    <tbody>
-                    @foreach (var t in s.Transactions)
-                    {
-                        <tr>
-                            <td>@t.TransactionDate.ToString("dd/MM/yyyy")</td>
-                            <td>
-                                @t.OriginalDescription
-                                <div class="muted" style="font-size:.8rem">@t.NormalizedDescription</div>
-                            </td>
-                            <td class="num @(t.Type == TransactionType.Expense ? "value expense" : "value income")"
-                                style="font-size:1rem">
-                                @(t.Type == TransactionType.Expense ? "-" : "+")@Money(t.Amount)
-                            </td>
-                        </tr>
-                    }
-                    </tbody>
-                </table>
+        <details class="section">
+            <summary>
+                <span class="sec-title">@(s.IsSelf ? $"Άμεσες κινήσεις · {s.Path}" : s.Path)</span>
+                <span class="muted" style="font-size:.8rem"> (@s.Transactions.Count)</span>
+                <span class="value expense sec-amount">@Money(s.Subtotal)</span>
+            </summary>
+            <div style="margin-top:.75rem;">
+                @if (s.Transactions.Count == 0)
+                {
+                    <p class="muted">Καμία άμεση κίνηση σε αυτή την κατηγορία στην περίοδο.</p>
+                }
+                else
+                {
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Ημ/νία</th><th>Περιγραφή</th><th class="num">Ποσό</th></tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var t in s.Transactions)
+                            {
+                                <tr>
+                                    <td>@t.TransactionDate.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        @t.OriginalDescription
+                                        <div class="muted" style="font-size:.8rem">@t.NormalizedDescription</div>
+                                    </td>
+                                    <td class="num @(t.Type == TransactionType.Expense ? "value expense" : "value income")"
+                                        style="font-size:1rem">
+                                        @(t.Type == TransactionType.Expense ? "-" : "+")@Money(t.Amount)
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
             </div>
-        }
+        </details>
     </div>
 }
 

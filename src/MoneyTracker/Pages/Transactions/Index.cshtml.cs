@@ -27,8 +27,15 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string? Q { get; set; }
 
+    /// <summary>"" = όλες, "none" = χωρίς κατηγορία, ή το id μιας κατηγορίας (μαζί με τα children της).</summary>
+    [BindProperty(SupportsGet = true)]
+    public string? Cat { get; set; }
+
     [BindProperty]
     public Dictionary<long, int?> Selected { get; set; } = new();
+
+    [BindProperty]
+    public long DeleteId { get; set; }
 
     public List<Transaction> Items { get; private set; } = new();
     public List<CategoryOption> CategoryOptions { get; private set; } = new();
@@ -60,6 +67,19 @@ public class IndexModel : PageModel
         return Page();
     }
 
+    public async Task<IActionResult> OnPostDeleteAsync()
+    {
+        var t = await _db.Transactions.FindAsync(DeleteId);
+        if (t != null)
+        {
+            _db.Transactions.Remove(t);
+            await _db.SaveChangesAsync();
+            Message = "Η κίνηση διαγράφηκε.";
+        }
+        await LoadAsync();
+        return Page();
+    }
+
     private async Task LoadAsync()
     {
         var query = _db.Transactions.AsNoTracking().AsQueryable();
@@ -71,6 +91,16 @@ public class IndexModel : PageModel
             query = query.Where(t => t.OriginalDescription.Contains(q) || t.NormalizedDescription.Contains(q));
         }
 
+        if (Cat == "none")
+        {
+            query = query.Where(t => t.CategoryId == null);
+        }
+        else if (int.TryParse(Cat, out var catId))
+        {
+            var ids = await DescendantCategoryIdsAsync(catId);
+            query = query.Where(t => t.CategoryId != null && ids.Contains(t.CategoryId.Value));
+        }
+
         Items = await query
             .OrderByDescending(t => t.TransactionDate)
             .ThenByDescending(t => t.Id)
@@ -78,5 +108,28 @@ public class IndexModel : PageModel
             .ToListAsync();
 
         CategoryOptions = await _categories.GetOptionsAsync();
+    }
+
+    /// <summary>The category plus all its descendants (depth ≤ 3), so filtering a parent includes children.</summary>
+    private async Task<HashSet<int>> DescendantCategoryIdsAsync(int categoryId)
+    {
+        var cats = await _db.Categories.AsNoTracking()
+            .Select(c => new { c.Id, c.ParentId })
+            .ToListAsync();
+        var childrenByParent = cats
+            .GroupBy(c => c.ParentId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Id).ToList());
+
+        var ids = new HashSet<int> { categoryId };
+        var stack = new Stack<int>();
+        stack.Push(categoryId);
+        while (stack.Count > 0)
+        {
+            var cur = stack.Pop();
+            if (childrenByParent.TryGetValue(cur, out var children))
+                foreach (var c in children)
+                    if (ids.Add(c)) stack.Push(c);
+        }
+        return ids;
     }
 }

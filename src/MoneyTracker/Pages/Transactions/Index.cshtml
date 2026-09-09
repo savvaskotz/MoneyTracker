@@ -26,11 +26,27 @@
             <label>Αναζήτηση</label>
             <input type="text" name="Q" value="@Model.Q" placeholder="περιγραφή..." />
         </div>
+        <div class="field">
+            <label>Κατηγορία</label>
+            <select name="Cat">
+                <option value="" selected="@(string.IsNullOrEmpty(Model.Cat))">— Όλες —</option>
+                <option value="none" selected="@(Model.Cat == "none")">🚫 Χωρίς κατηγορία</option>
+                @foreach (var opt in Model.CategoryOptions)
+                {
+                    <option value="@opt.Id" selected="@(Model.Cat == opt.Id.ToString())">@opt.Path</option>
+                }
+            </select>
+        </div>
         <button type="submit" class="primary">Φίλτρο</button>
     </form>
 </div>
 
 <form method="post">
+    @* Keep the active filter after saving, so you can keep working through the uncategorized list. *@
+    <input type="hidden" name="From" value="@(Model.From?.ToString("yyyy-MM-dd"))" />
+    <input type="hidden" name="To" value="@(Model.To?.ToString("yyyy-MM-dd"))" />
+    <input type="hidden" name="Q" value="@Model.Q" />
+    <input type="hidden" name="Cat" value="@Model.Cat" />
     <div class="table-wrap card">
         <table>
             <thead>
@@ -39,6 +55,7 @@
                     <th>Περιγραφή</th>
                     <th class="num">Ποσό</th>
                     <th>Κατηγορία</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -69,6 +86,10 @@
                                 }
                             }
                         </select>
+                    </td>
+                    <td>
+                        <button type="submit" asp-page-handler="Delete" name="DeleteId" value="@t.Id"
+                                class="ghost" onclick="return confirm('Διαγραφή κίνησης;');">🗑</button>
                     </td>
                 </tr>
             }

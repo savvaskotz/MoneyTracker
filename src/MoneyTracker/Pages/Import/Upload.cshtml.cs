@@ -16,7 +16,7 @@ public class UploadModel : PageModel
     }
 
     [BindProperty]
-    public IFormFile? File { get; set; }
+    public IFormFile? UploadFile { get; set; }
 
     public List<string> Errors { get; } = new();
 
@@ -24,28 +24,28 @@ public class UploadModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        if (File == null || File.Length == 0)
+        if (UploadFile == null || UploadFile.Length == 0)
         {
             Errors.Add("Επίλεξε ένα αρχείο Excel.");
             return Page();
         }
 
         var maxSize = _config.GetValue<long?>("Upload:MaxFileSizeBytes") ?? 5_242_880;
-        if (File.Length > maxSize)
+        if (UploadFile.Length > maxSize)
         {
             Errors.Add($"Το αρχείο είναι πολύ μεγάλο (όριο {maxSize / 1024 / 1024} MB).");
             return Page();
         }
 
-        var ext = Path.GetExtension(File.FileName).ToLowerInvariant();
+        var ext = Path.GetExtension(UploadFile.FileName).ToLowerInvariant();
         if (ext != ".xlsx")
         {
             Errors.Add("Επιτρέπονται μόνο αρχεία .xlsx.");
             return Page();
         }
 
-        await using var stream = File.OpenReadStream();
-        var (batchId, errors) = await _import.BuildPreviewAsync(stream, Path.GetFileName(File.FileName));
+        await using var stream = UploadFile.OpenReadStream();
+        var (batchId, errors) = await _import.BuildPreviewAsync(stream, Path.GetFileName(UploadFile.FileName));
 
         if (batchId == null)
         {

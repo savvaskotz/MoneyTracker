@@ -53,5 +53,9 @@ public static class DbSeeder
             "IF COL_LENGTH('ImportBatches','UpdatedCount') IS NULL " +
             "ALTER TABLE ImportBatches ADD UpdatedCount int NOT NULL " +
             "CONSTRAINT DF_ImportBatches_UpdatedCount DEFAULT(0);");
+
+        db.Database.ExecuteSqlRaw(
+            "IF COL_LENGTH('Transactions','Note') IS NULL " +
+            "ALTER TABLE Transactions ADD Note nvarchar(1000) NULL;");
     }
 }

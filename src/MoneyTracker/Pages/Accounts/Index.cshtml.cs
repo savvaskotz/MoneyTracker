@@ -38,7 +38,7 @@ public class IndexModel : PageModel
             Error = "Υπάρχει ήδη λογαριασμός με αυτό το όνομα.";
         else
         {
-            _db.Accounts.Add(new Account
+            _db.Accounts.Add(new MoneyTracker.Domain.Account
             {
                 Name = name,
                 Identifier = "ACC-" + Guid.NewGuid().ToString("N")[..8],

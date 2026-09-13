@@ -28,7 +28,7 @@ public class IndexModel : PageModel
     public int? AccountId { get; set; }
 
     public DashboardViewModel Data { get; private set; } = new();
-    public List<Account> Accounts { get; private set; } = new();
+    public List<MoneyTracker.Domain.Account> Accounts { get; private set; } = new();
 
     public async Task OnGetAsync()
     {

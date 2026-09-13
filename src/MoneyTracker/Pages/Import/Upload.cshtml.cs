@@ -29,7 +29,7 @@ public class UploadModel : PageModel
     [BindProperty]
     public string? NewAccountName { get; set; }
 
-    public List<Account> Accounts { get; private set; } = new();
+    public List<MoneyTracker.Domain.Account> Accounts { get; private set; } = new();
 
     public List<string> Errors { get; } = new();
 
@@ -71,7 +71,7 @@ public class UploadModel : PageModel
             }
             else
             {
-                var account = new Account
+                var account = new MoneyTracker.Domain.Account
                 {
                     Name = name,
                     Identifier = "ACC-" + Guid.NewGuid().ToString("N")[..8],

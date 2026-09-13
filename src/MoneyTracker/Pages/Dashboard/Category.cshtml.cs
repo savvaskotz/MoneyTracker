@@ -24,7 +24,7 @@ public class CategoryModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int? AccountId { get; set; }
 
-    public List<Account> Accounts { get; private set; } = new();
+    public List<MoneyTracker.Domain.Account> Accounts { get; private set; } = new();
     public bool Found { get; private set; }
     public string CategoryPath { get; private set; } = string.Empty;
     public DateTime RangeFrom { get; private set; }

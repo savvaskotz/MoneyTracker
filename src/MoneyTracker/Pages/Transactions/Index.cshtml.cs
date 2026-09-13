@@ -34,7 +34,7 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public int? AccountId { get; set; }
 
-    public List<Account> Accounts { get; private set; } = new();
+    public List<MoneyTracker.Domain.Account> Accounts { get; private set; } = new();
 
     [BindProperty]
     public Dictionary<long, int?> Selected { get; set; } = new();

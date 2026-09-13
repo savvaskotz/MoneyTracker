@@ -9,7 +9,8 @@
 
 <p><a asp-page="/Dashboard/Index" asp-route-Preset="@Model.Preset"
       asp-route-From="@(Model.From?.ToString("yyyy-MM-dd"))"
-      asp-route-To="@(Model.To?.ToString("yyyy-MM-dd"))">← Πίσω στο Dashboard</a></p>
+      asp-route-To="@(Model.To?.ToString("yyyy-MM-dd"))"
+      asp-route-AccountId="@(Model.AccountId?.ToString())">← Πίσω στο Dashboard</a></p>
 
 @if (!Model.Found)
 {
@@ -22,6 +23,16 @@
 <div class="card">
     <form method="get" class="filters">
         <input type="hidden" name="Id" value="@Model.Id" />
+        <div class="field">
+            <label>Λογαριασμός</label>
+            <select name="AccountId" onchange="this.form.submit()">
+                <option value="">— Όλοι —</option>
+                @foreach (var acc in Model.Accounts)
+                {
+                    <option value="@acc.Id" selected="@(Model.AccountId == acc.Id)">@acc.Name</option>
+                }
+            </select>
+        </div>
         <div class="field">
             <label>Περίοδος</label>
             <select name="Preset" onchange="this.form.submit()">

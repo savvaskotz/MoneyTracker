@@ -9,12 +9,23 @@
     ViewData["Preset"] = Model.Preset;
     ViewData["From"] = Model.From?.ToString("yyyy-MM-dd");
     ViewData["To"] = Model.To?.ToString("yyyy-MM-dd");
+    ViewData["AccountId"] = Model.AccountId?.ToString();
 }
 
 <h1>Dashboard</h1>
 
 <div class="card">
     <form method="get" class="filters">
+        <div class="field">
+            <label>Λογαριασμός</label>
+            <select name="AccountId" onchange="this.form.submit()">
+                <option value="">— Όλοι —</option>
+                @foreach (var acc in Model.Accounts)
+                {
+                    <option value="@acc.Id" selected="@(Model.AccountId == acc.Id)">@acc.Name</option>
+                }
+            </select>
+        </div>
         <div class="field">
             <label>Περίοδος</label>
             <select name="Preset" onchange="this.form.submit()">

@@ -27,9 +27,14 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string? Q { get; set; }
 
-    /// <summary>"" = όλες, "none" = χωρίς κατηγορία, ή το id μιας κατηγορίας (μαζί με τα children της).</summary>
+    /// <summary>"" = όλες, "none" = χωρίς κατηγορία, ή το id μιας κατηγορίας.</summary>
     [BindProperty(SupportsGet = true)]
     public string? Cat { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int? AccountId { get; set; }
+
+    public List<Account> Accounts { get; private set; } = new();
 
     [BindProperty]
     public Dictionary<long, int?> Selected { get; set; } = new();
@@ -107,6 +112,9 @@ public class IndexModel : PageModel
             query = query.Where(t => t.OriginalDescription.Contains(q) || t.NormalizedDescription.Contains(q));
         }
 
+        if (AccountId is int aid)
+            query = query.Where(t => t.AccountId == aid);
+
         if (Cat == "none")
         {
             query = query.Where(t => t.CategoryId == null);
@@ -124,5 +132,6 @@ public class IndexModel : PageModel
             .ToListAsync();
 
         CategoryOptions = await _categories.GetOptionsAsync();
+        Accounts = await _db.Accounts.AsNoTracking().OrderBy(a => a.Name).ToListAsync();
     }
 }

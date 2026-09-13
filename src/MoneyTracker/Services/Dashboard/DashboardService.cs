@@ -19,6 +19,8 @@ public class DashboardFilter
     public DateRangePreset Preset { get; set; } = DateRangePreset.ThisMonth;
     public DateTime? From { get; set; }
     public DateTime? To { get; set; }
+    /// <summary>Optional account filter; null = all accounts.</summary>
+    public int? AccountId { get; set; }
 
     public (DateTime From, DateTime To) Resolve(DateTime today)
     {
@@ -117,6 +119,9 @@ public class DashboardService : IDashboardService
 
         var txQuery = _db.Transactions.AsNoTracking()
             .Where(t => t.TransactionDate >= from && t.TransactionDate <= to);
+
+        if (filter.AccountId is int accountId)
+            txQuery = txQuery.Where(t => t.AccountId == accountId);
 
         var expenses = await txQuery.Where(t => t.Type == TransactionType.Expense).ToListAsync();
         var income = await txQuery.Where(t => t.Type == TransactionType.Income).ToListAsync();

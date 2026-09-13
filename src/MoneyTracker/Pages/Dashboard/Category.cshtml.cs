@@ -21,7 +21,10 @@ public class CategoryModel : PageModel
     public DateTime? From { get; set; }
     [BindProperty(SupportsGet = true)]
     public DateTime? To { get; set; }
+    [BindProperty(SupportsGet = true)]
+    public int? AccountId { get; set; }
 
+    public List<Account> Accounts { get; private set; } = new();
     public bool Found { get; private set; }
     public string CategoryPath { get; private set; } = string.Empty;
     public DateTime RangeFrom { get; private set; }
@@ -43,6 +46,8 @@ public class CategoryModel : PageModel
         var (from, to) = new DashboardFilter { Preset = Preset, From = From, To = To }.Resolve(DateTime.Today);
         RangeFrom = from;
         RangeTo = to;
+
+        Accounts = await _db.Accounts.AsNoTracking().OrderBy(a => a.Name).ToListAsync();
 
         var cats = await _db.Categories.AsNoTracking().ToListAsync();
         var byId = cats.ToDictionary(c => c.Id);
@@ -69,9 +74,12 @@ public class CategoryModel : PageModel
         Walk(Id);
 
         var idSet = ordered.ToHashSet();
-        var txs = await _db.Transactions.AsNoTracking()
+        var txQuery = _db.Transactions.AsNoTracking()
             .Where(t => t.CategoryId != null && idSet.Contains(t.CategoryId.Value)
-                        && t.TransactionDate >= from && t.TransactionDate <= to)
+                        && t.TransactionDate >= from && t.TransactionDate <= to);
+        if (AccountId is int acc)
+            txQuery = txQuery.Where(t => t.AccountId == acc);
+        var txs = await txQuery
             .OrderByDescending(t => t.TransactionDate).ThenByDescending(t => t.Id)
             .ToListAsync();
 

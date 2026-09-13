@@ -36,6 +36,18 @@ public static class DbSeeder
             });
             db.SaveChanges();
         }
+
+        // Ensure at least one account exists so imports can be assigned to it.
+        if (!db.Accounts.Any())
+        {
+            db.Accounts.Add(new Domain.Account
+            {
+                Name = "Προσωπικός",
+                Identifier = "DEFAULT",
+                CreatedAt = DateTime.UtcNow
+            });
+            db.SaveChanges();
+        }
     }
 
     /// <summary>

@@ -9,7 +9,7 @@ namespace MoneyTracker.Services.Import;
 public interface IImportService
 {
     /// <summary>Parse + stage a file for preview. Returns the batch id, or errors (no batch).</summary>
-    Task<(int? BatchId, List<string> Errors)> BuildPreviewAsync(Stream excelStream, string fileName);
+    Task<(int? BatchId, List<string> Errors)> BuildPreviewAsync(Stream excelStream, string fileName, int accountId);
 
     Task ConfirmAsync(int batchId,
         IDictionary<long, int?> selectedCategoryByRowId,
@@ -46,17 +46,19 @@ public class ImportService : IImportService
         _learning = learning;
     }
 
-    public async Task<(int? BatchId, List<string> Errors)> BuildPreviewAsync(Stream excelStream, string fileName)
+    public async Task<(int? BatchId, List<string> Errors)> BuildPreviewAsync(Stream excelStream, string fileName, int accountId)
     {
         var profile = await _db.ImportProfiles.OrderBy(p => p.Id).FirstOrDefaultAsync();
         if (profile == null)
             return (null, new List<string> { "Δεν έχει οριστεί import profile." });
 
+        var account = await _db.Accounts.FindAsync(accountId);
+        if (account == null)
+            return (null, new List<string> { "Ο λογαριασμός δεν βρέθηκε." });
+
         var read = _reader.Read(excelStream, profile);
         if (read.HasErrors)
             return (null, read.Errors);
-
-        var account = await ResolveAccountAsync(read.AccountIdentifier);
 
         // Resolve the bank's category column to an EXISTING category only — we do NOT create
         // categories automatically. If the user hasn't created it, the row stays uncategorized.
@@ -296,23 +298,6 @@ public class ImportService : IImportService
         batch.Status = ImportStatus.Cancelled;
         _db.ImportStagingRows.RemoveRange(batch.StagingRows);
         await _db.SaveChangesAsync();
-    }
-
-    private async Task<Account> ResolveAccountAsync(string? identifier)
-    {
-        identifier = string.IsNullOrWhiteSpace(identifier) ? "DEFAULT" : identifier.Trim();
-        var account = await _db.Accounts.FirstOrDefaultAsync(a => a.Identifier == identifier);
-        if (account != null) return account;
-
-        account = new Account
-        {
-            Identifier = identifier,
-            Name = identifier == "DEFAULT" ? "Default account" : identifier,
-            CreatedAt = DateTime.UtcNow
-        };
-        _db.Accounts.Add(account);
-        await _db.SaveChangesAsync();
-        return account;
     }
 
     private static bool IsUncategorizedBankLabel(string path)

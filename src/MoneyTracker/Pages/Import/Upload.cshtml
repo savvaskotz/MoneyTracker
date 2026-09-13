@@ -24,6 +24,20 @@
             <label asp-for="UploadFile">Αρχείο Excel (.xlsx)</label>
             <input asp-for="UploadFile" type="file" accept=".xlsx" />
         </div>
+        <div class="field">
+            <label asp-for="AccountId">Λογαριασμός</label>
+            <select asp-for="AccountId">
+                <option value="">— Διάλεξε λογαριασμό —</option>
+                @foreach (var acc in Model.Accounts)
+                {
+                    <option value="@acc.Id">@acc.Name</option>
+                }
+            </select>
+        </div>
+        <div class="field">
+            <label asp-for="NewAccountName">…ή νέος λογαριασμός</label>
+            <input asp-for="NewAccountName" placeholder="π.χ. Πιστωτική Πειραιώς" />
+        </div>
         <p class="muted">
             Το αρχείο διαβάζεται και εμφανίζεται preview. Καμία κίνηση δεν αποθηκεύεται
             πριν την επιβεβαίωσή σου.

@@ -15,6 +15,16 @@
 <div class="card">
     <form method="get" class="filters">
         <div class="field">
+            <label>Λογαριασμός</label>
+            <select name="AccountId">
+                <option value="">— Όλοι —</option>
+                @foreach (var acc in Model.Accounts)
+                {
+                    <option value="@acc.Id" selected="@(Model.AccountId == acc.Id)">@acc.Name</option>
+                }
+            </select>
+        </div>
+        <div class="field">
             <label>Από</label>
             <input type="date" name="From" value="@(Model.From?.ToString("yyyy-MM-dd"))" />
         </div>
@@ -47,6 +57,7 @@
     <input type="hidden" name="To" value="@(Model.To?.ToString("yyyy-MM-dd"))" />
     <input type="hidden" name="Q" value="@Model.Q" />
     <input type="hidden" name="Cat" value="@Model.Cat" />
+    <input type="hidden" name="AccountId" value="@(Model.AccountId?.ToString())" />
     <div class="table-wrap card">
         <table>
             <thead>
